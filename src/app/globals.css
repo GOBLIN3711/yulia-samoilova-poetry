@@ -1,1 +1,94 @@
 @import "tailwindcss";
+
+@theme {
+  --color-coffee-bg: #F5F0EB;
+  --color-coffee-dark: #3C2415;
+  --color-coffee-gold: #C8A45C;
+  --color-coffee-light: #EDE6DD;
+  --color-coffee-muted: #8B7355;
+  --color-coffee-card: #FDFAF7;
+  --color-coffee-border: #D4C5B5;
+  --font-serif: "Playfair Display", "Georgia", serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #F5F0EB;
+  color: #3C2415;
+}
+
+/* Custom scrollbar for poem list */
+.poem-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.poem-list::-webkit-scrollbar-track {
+  background: #EDE6DD;
+  border-radius: 3px;
+}
+
+.poem-list::-webkit-scrollbar-thumb {
+  background: #C8A45C;
+  border-radius: 3px;
+}
+
+.poem-list::-webkit-scrollbar-thumb:hover {
+  background: #8B7355;
+}
+
+/* Audio player progress bar */
+.player-progress::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #D4C5B5;
+  border-radius: 2px;
+}
+
+.player-progress::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #C8A45C;
+  margin-top: -5px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.player-progress::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.player-progress::-moz-range-track {
+  height: 4px;
+  background: #D4C5B5;
+  border-radius: 2px;
+}
+
+.player-progress::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #C8A45C;
+  border: none;
+  cursor: pointer;
+}
+
+/* Category tabs custom scrollbar */
+.tabs-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-scroll::-webkit-scrollbar-thumb {
+  background: #C8A45C;
+  border-radius: 2px;
+}
