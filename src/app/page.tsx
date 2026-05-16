@@ -57,21 +57,16 @@ function Hero() {
         </div>
       </div>
 
-      {/* ─── Mobile: full image, nothing cropped ─── */}
-      <div className="md:hidden relative">
+      {/* ─── Mobile: full image visible, button below ─── */}
+      <div className="md:hidden" style={{ background: '#0a0805' }}>
+        {/* Full image — no cropping, no overlay */}
         <img
           src="/v2_hero.png"
           alt="Юлия Самойлова — Поэтесса из Санкт-Петербурга"
           className="w-full h-auto block"
-          style={{ display: 'block' }}
         />
-        {/* Overlay gradient */}
-        <div className="hero-overlay absolute inset-0" />
-        <div className="absolute bottom-0 left-0 right-0 h-28" style={{
-          background: 'linear-gradient(to top, rgba(20, 12, 5, 0.65) 0%, rgba(20, 12, 5, 0.3) 50%, transparent 100%)',
-        }} />
-        {/* Button at the bottom of the image */}
-        <div className="absolute bottom-5 left-0 right-0 z-10 text-center px-4">
+        {/* Button at the bottom of the picture */}
+        <div className="text-center py-6 px-4">
           <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-8 py-3.5 font-serif text-base">
             Открыть мир стихов
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
