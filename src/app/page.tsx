@@ -1,408 +1,421 @@
-'use client';
+import PoetryTabs from "@/components/PoetryTabs"
+import MusicPlayer from "@/components/MusicPlayer"
+import FeedbackForm from "@/components/FeedbackForm"
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import poems from '@/data/poems.json';
-import Link from 'next/link';
+const NAV_LINKS = [
+  { href: "#about", label: "О себе" },
+  { href: "#petersburg", label: "Петербург" },
+  { href: "#poetry", label: "Стихи" },
+  { href: "#music", label: "Музыка" },
+  { href: "#feedback", label: "Отзывы" },
+]
 
-const categories = [
-  "Размышления",
-  "Любовная лирика",
-  "Семья и родные",
-  "Санкт-Петербург",
-  "Природа и времена года",
-  "Духовная поэзия",
-  "О Родине и мире",
-];
-
-interface Track {
-  title: string;
-  src: string;
+function Header() {
+  return (
+    <header className="header-bar sticky top-0 left-0 right-0 z-50 py-3">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center gap-3 sm:gap-4 flex-wrap">
+        <nav className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="nav-pill font-serif text-base sm:text-lg font-semibold px-5 sm:px-6 py-2.5 sm:py-3"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+        <a href="/admin" className="admin-pill flex items-center gap-1.5 font-sans text-sm font-medium px-4 py-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Управление
+        </a>
+      </div>
+    </header>
+  )
 }
 
-const tracks: Track[] = [
-  { title: "Слушай тишину", src: "/music/slushay-tishinu.mp3" },
-  { title: "Скриншоты без ответа", src: "/music/skrinshoty.mp3" },
-];
+function Hero() {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover object-center" />
+        <div className="hero-overlay absolute inset-0" />
+      </div>
+      <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl mx-auto flex flex-col items-center justify-end" style={{ minHeight: '40vh' }}>
+        <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-10 py-4 font-serif text-base md:text-lg">
+          Открыть мир стихов
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </a>
+      </div>
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
+        <svg className="w-6 h-6" style={{ color: 'rgba(200, 164, 92, 0.4)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7" />
+        </svg>
+      </div>
+    </section>
+  )
+}
 
-function formatTime(seconds: number): string {
-  if (isNaN(seconds) || !isFinite(seconds)) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+function About() {
+  return (
+    <section className="relative py-20 md:py-28 px-4 overflow-hidden">
+      {/* SPb-inspired warm background */}
+      <div className="absolute inset-0 z-0" style={{
+        background: 'linear-gradient(160deg, #FAF7F2 0%, #F5EDE0 30%, #EDE2D0 60%, #F5EDE0 100%)',
+      }} />
+      <div className="absolute inset-0 z-0" style={{
+        background: 'radial-gradient(ellipse at 80% 20%, rgba(200, 164, 92, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(196, 139, 127, 0.06) 0%, transparent 50%)',
+      }} />
+      <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        {/* Portrait */}
+        <div className="relative max-w-md mx-auto">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl" style={{ boxShadow: '0 8px 40px rgba(60, 36, 21, 0.12), 0 2px 8px rgba(200, 164, 92, 0.2)' }}>
+            <div className="absolute -inset-1 rounded-2xl z-0" style={{ background: 'linear-gradient(135deg, rgba(200, 164, 92, 0.5), rgba(196, 139, 127, 0.3), rgba(200, 164, 92, 0.5))' }} />
+            <img src="/juliasamoilova1.jpg" alt="Юлия Самойлова — поэтесса" className="absolute inset-0 w-full h-full object-cover object-top rounded-2xl relative z-10" />
+          </div>
+          {/* Decorative corners */}
+          <div className="absolute -top-3 -right-3 w-16 h-16 rounded-xl z-20" style={{ border: '2px solid rgba(200, 164, 92, 0.2)', borderLeft: 'none', borderBottom: 'none' }} />
+          <div className="absolute -bottom-3 -left-3 w-16 h-16 rounded-xl z-20" style={{ border: '2px solid rgba(200, 164, 92, 0.2)', borderRight: 'none', borderTop: 'none' }} />
+        </div>
+        {/* Bio */}
+        <div id="about">
+          <div className="ornament mb-6 justify-start">
+            <span className="text-sm tracking-[0.3em] uppercase" style={{ color: '#8B7355' }}>Биография</span>
+          </div>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-gold-gradient">
+            О себе
+          </h2>
+          <div className="space-y-4 font-serif text-base sm:text-lg leading-[1.9]" style={{ color: '#6B4C3B' }}>
+            <p>
+              Поэтесса из Санкт-Петербурга — города, который сам по себе
+              является величайшим стихотворением, написанным архитекторами и стихией.
+              С детства она дышит воздухом белых ночей, ходит по гранитным набережным
+              и слушает, как Нева перешёптывается с мостами.
+            </p>
+            <p>
+              Её поэзия — это не просто слова на бумаге. Это разговор души с миром,
+              где каждая строка пропитана ароматом петербургских двориков, звоном
+              колоколов и бесконечным небом северной столицы. Природа, любовь, семья,
+              духовность, память — темы, которые она коснулась так тонко и глубоко,
+              что читатель волей-неволей останавливается, чтобы прислушаться к себе.
+            </p>
+            <p>
+              Более 285 стихотворений, опубликованных на литературных порталах,
+              находят отклик в сердцах читателей по всей России. И за каждым
+              стихотворением — живая история, прожитая с открытым сердцем.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mt-8 pt-8" style={{ borderTop: '1px solid rgba(200, 164, 92, 0.15)' }}>
+            {[
+              { number: "285+", label: "стихотворений" },
+              { number: "8", label: "тем" },
+              { number: "∞", label: "чувств" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center md:text-left">
+                <div className="font-display text-2xl md:text-3xl font-bold mb-1" style={{ color: '#C8A45C' }}>{stat.number}</div>
+                <div className="text-xs sm:text-sm font-serif" style={{ color: '#8B7355' }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PetersburgSection() {
+  return (
+    <section id="petersburg" className="relative py-24 md:py-32 px-4 overflow-hidden">
+      {/* Rich SPb background */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(135deg, #E8D5B8 0%, #D4C4A0 25%, #C8B898 50%, #D8C8A8 75%, #E0D0B8 100%)',
+        }} />
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(ellipse at 30% 50%, rgba(200, 164, 92, 0.15) 0%, transparent 60%), radial-gradient(ellipse at 70% 30%, rgba(196, 139, 127, 0.1) 0%, transparent 50%)',
+        }} />
+        {/* Subtle ornamental pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233C2415' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto text-center">
+        <div className="ornament mb-6">
+          <span className="text-sm tracking-[0.3em] uppercase" style={{ color: '#8B7355' }}>Вдохновение</span>
+        </div>
+        <h2 className="font-display text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-6 text-gold-gradient">
+          Город, который дышит стихами
+        </h2>
+        <div className="font-serif text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed space-y-6" style={{ color: '#5C3D2E' }}>
+          <p>
+            Санкт-Петербург — не просто город. Это живая поэма, написанная мрамором и гранитом,
+            залитая серебряным светом белых ночей. Здесь каждый мост хранит тайну, каждый дворник-колодец
+            шепчет предания, а невские туманы рождают миры, которых не существует нигде больше на земле.
+          </p>
+          <p>
+            Это город, где Пушкин гулял по набережным и мечтал, где Достоевский искал
+            человеческую душу в лабиринте улиц, где Ахматова слушала, как время течёт
+            сквозь решётки решётчатых оград. И в этом великом хоре голосов звучит
+            и голос Юлии Самойловой — тихий, но пронзительный, как весенний луч,
+            пробившийся сквозь петербургскую облачность.
+          </p>
+        </div>
+        {/* Decorative Petersburg elements */}
+        <div className="flex items-center justify-center gap-8 mt-12">
+          {[
+            { icon: "🏛", label: "Дворцы" },
+            { icon: "🌉", label: "Мосты" },
+            { icon: "🌙", label: "Белые ночи" },
+            { icon: "⚓", label: "Нева" },
+          ].map((item) => (
+            <div key={item.label} className="text-center">
+              <div className="text-2xl sm:text-3xl mb-1">{item.icon}</div>
+              <div className="text-xs sm:text-sm font-serif" style={{ color: '#8B7355' }}>{item.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function CreativeTextSection() {
+  return (
+    <section className="relative py-20 md:py-28 px-4 overflow-hidden">
+      {/* Vibrant warm background with golden glow */}
+      <div className="absolute inset-0 z-0" style={{
+        background: 'linear-gradient(170deg, #F8F0E3 0%, #F3E8D5 25%, #EDDCC5 50%, #F0E5D0 75%, #F8F0E3 100%)',
+      }} />
+      <div className="absolute inset-0 z-0" style={{
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(200, 164, 92, 0.12) 0%, transparent 50%), radial-gradient(ellipse at 20% 100%, rgba(196, 123, 90, 0.08) 0%, transparent 40%), radial-gradient(ellipse at 80% 100%, rgba(123, 158, 123, 0.06) 0%, transparent 40%)',
+      }} />
+      {/* Decorative floating circles */}
+      <div className="absolute top-10 left-[10%] w-32 h-32 rounded-full opacity-[0.04]" style={{ background: 'radial-gradient(circle, #C8A45C, transparent)' }} />
+      <div className="absolute bottom-10 right-[15%] w-40 h-40 rounded-full opacity-[0.03]" style={{ background: 'radial-gradient(circle, #C48B7F, transparent)' }} />
+      <div className="absolute top-1/2 right-[5%] w-24 h-24 rounded-full opacity-[0.03]" style={{ background: 'radial-gradient(circle, #7B9E7B, transparent)' }} />
+
+      <div className="relative z-10 max-w-3xl mx-auto">
+        <div className="text-center mb-10">
+          <div className="ornament mb-6">
+            <span className="text-sm tracking-[0.3em] uppercase" style={{ color: '#8B7355' }}>Размышления</span>
+          </div>
+        </div>
+
+        <div className="space-y-8 font-serif text-lg sm:text-xl md:text-2xl leading-[2]" style={{ color: '#5C3D2E' }}>
+          <p className="text-center" style={{ color: '#A68B3E', fontWeight: 500 }}>
+            Есть города, которые можно увидеть. А есть Петербург — его нужно слышать.
+          </p>
+          <p>
+            Он говорит с тобой шёпотом невской воды по утрам, звоном трамваев на проспекте,
+            скрипом снега под ногами в февральский вечер. Он находит тебя в неожиданные
+            моменты — когда солнце не заходит за горизонт и небо окрашивается в цвета,
+            которых нет ни в одной палитре художника.
+          </p>
+          <p>
+            И когда город заговорит, случается чудо: появляются строки. Не из головы —
+            из самой дыхания мостовых, из теней дворцовых арок, из света, что струится
+            сквозь витражи казанского собора. Они приходят сами, эти слова, — сто́ит лишь
+            замереть на мгновение и позволить Петербургу заглянуть тебе в душу.
+          </p>
+          <p>
+            Именно так рождаются стихи Юлии Самойловой. Не из сухих черновиков, не из
+            литературных амбиций, а из живого, тёплого, неукротимого чувства — любви
+            к городу, который дал ей голос, и к миру, который дал ей повод заговорить.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function QuoteBanner() {
+  return (
+    <section className="relative py-16 md:py-24 px-4 overflow-hidden">
+      <div className="absolute inset-0 z-0" style={{
+        background: 'linear-gradient(135deg, #F3EDE3 0%, #EDE4D5 50%, #F0E8D8 100%)',
+      }} />
+      <div className="absolute inset-0 z-0" style={{
+        background: 'radial-gradient(ellipse at 50% 50%, rgba(200, 164, 92, 0.08) 0%, transparent 60%)',
+      }} />
+      <div className="relative z-10 max-w-3xl mx-auto text-center">
+        <blockquote className="relative">
+          <span className="quote-mark absolute -top-6 left-0 text-6xl md:text-8xl select-none">&laquo;</span>
+          <p className="font-serif text-xl sm:text-2xl md:text-3xl italic leading-relaxed pt-8" style={{ color: 'rgba(60, 36, 21, 0.8)' }}>
+            Поэзия — это когда слова начинают звучать,{" "}
+            <span style={{ color: '#A68B3E' }}>
+              а тишина обретает голос
+            </span>
+          </p>
+          <footer className="mt-6 font-serif text-sm tracking-widest uppercase" style={{ color: '#8B7355' }}>
+            — Юлия Самойлова
+          </footer>
+          <span className="quote-mark absolute -bottom-6 right-0 text-6xl md:text-8xl select-none">&raquo;</span>
+        </blockquote>
+      </div>
+    </section>
+  )
+}
+
+function AboutYuriy() {
+  return (
+    <section className="relative py-20 md:py-28 px-4 overflow-hidden">
+      {/* Warm gradient background */}
+      <div className="absolute inset-0 z-0" style={{
+        background: 'linear-gradient(160deg, #FAF7F2 0%, #F5EDE0 30%, #F0E5D5 60%, #FAF7F2 100%)',
+      }} />
+      <div className="absolute inset-0 z-0" style={{
+        background: 'radial-gradient(ellipse at 70% 30%, rgba(196, 123, 90, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 30% 70%, rgba(200, 164, 92, 0.06) 0%, transparent 50%)',
+      }} />
+      <div className="absolute top-0 right-0 w-1/2 h-full opacity-[0.03] z-0" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23C8A45C' stroke-width='1'%3E%3Cpath d='M0 40h80M40 0v80'/%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
+      <div className="relative z-10 max-w-6xl mx-auto grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+        {/* Yuriy photo */}
+        <div className="relative max-w-xs mx-auto md:order-2">
+          <div className="relative aspect-[16/10] overflow-hidden rounded-2xl" style={{ boxShadow: '0 8px 40px rgba(60, 36, 21, 0.1), 0 2px 8px rgba(196, 123, 90, 0.15)' }}>
+            <div className="absolute -inset-1 rounded-2xl z-0" style={{ background: 'linear-gradient(135deg, rgba(196, 123, 90, 0.4), rgba(200, 164, 92, 0.3), rgba(196, 123, 90, 0.4))' }} />
+            <img src="/yuriy.png" alt="Юрий — музыкальный творец" className="absolute inset-0 w-full h-full object-contain rounded-2xl relative z-10" />
+          </div>
+          <div className="absolute -top-3 -left-3 w-16 h-16 rounded-xl z-20" style={{ border: '2px solid rgba(196, 123, 90, 0.2)', borderRight: 'none', borderBottom: 'none' }} />
+          <div className="absolute -bottom-3 -right-3 w-16 h-16 rounded-xl z-20" style={{ border: '2px solid rgba(196, 123, 90, 0.2)', borderLeft: 'none', borderTop: 'none' }} />
+        </div>
+        {/* Text */}
+        <div className="md:order-1">
+          <div className="ornament mb-6 justify-start">
+            <span className="text-sm tracking-[0.3em] uppercase" style={{ color: '#8B7355' }}>Музыкальный творец</span>
+          </div>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-6" style={{ background: 'linear-gradient(135deg, #C47A5A, #C48B7F, #D4A843)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            О Юрии
+          </h2>
+          <div className="space-y-4 font-serif text-base sm:text-lg leading-[1.9]" style={{ color: '#6B4C3B' }}>
+            <p>
+              Юрий — музыкант и звукорежиссёр с тонким чувством гармонии, который взял
+              стихи Юлии Самойловой и превратил их в нечто большее, чем просто песни.
+              Используя современные возможности искусственного интеллекта как инструмента,
+              он создал цикл музыкальных композиций, где каждое слово поэзии обрело
+              свой собственный голос, свою мелодию, своё дыхание.
+            </p>
+            <p>
+              Каждая композиция — это диалог между двумя творческими мирами: словом
+              и звуком. Стихи Юлии — душа каждой песни, её сердце и смысл. Музыка Юрия —
+              крылья, которые поднимают эти стихи над страницей и несут их прямо
+              к слушателю. Вместе они создают атмосферу, в которой хочется остановиться,
+              закрыть глаза и просто слушать.
+            </p>
+          </div>
+          <div className="flex items-center gap-4 mt-8 pt-8" style={{ borderTop: '1px solid rgba(196, 123, 90, 0.15)' }}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(200, 164, 92, 0.15), rgba(196, 139, 127, 0.15))' }}>
+              <svg className="w-6 h-6" style={{ color: '#C8A45C' }} fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+              </svg>
+            </div>
+            <div>
+              <span className="font-display text-sm font-semibold" style={{ color: '#3C2415' }}>Поэзия + AI</span>
+              <span className="font-serif text-sm block" style={{ color: '#8B7355' }}>Слова — Юлия Самойлова, мелодия — Юрий</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Divider() {
+  return (
+    <div className="max-w-xs mx-auto px-4 py-4">
+      <div className="decorative-line" />
+    </div>
+  )
+}
+
+function Footer() {
+  return (
+    <footer id="contacts" className="relative py-16 md:py-20 px-4 safe-bottom overflow-hidden">
+      {/* Warm background */}
+      <div className="absolute inset-0" style={{
+        background: 'linear-gradient(to bottom, #EDE4D5 0%, #F3EDE3 50%, #EDE4D5 100%)',
+      }} />
+      <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="spb-ornament mb-10" />
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 mb-10">
+          <div className="sm:col-span-2 md:col-span-1">
+            <h3 className="font-display text-3xl font-bold mb-4 text-gold-gradient">Юлия Самойлова</h3>
+            <p className="font-serif text-lg leading-relaxed" style={{ color: '#3C2415' }}>
+              Поэтесса из Санкт-Петербурга. Стихи, наполненные душой северной столицы и любовью к каждому мгновению жизни.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-sans text-base tracking-[0.2em] uppercase mb-4 font-bold" style={{ color: '#3C2415' }}>Навигация</h4>
+            <ul className="space-y-3">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} className="font-serif text-lg transition-colors hover:underline" style={{ color: '#4A3020' }}>
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-sans text-base tracking-[0.2em] uppercase mb-4 font-bold" style={{ color: '#3C2415' }}>Контакты</h4>
+            <ul className="space-y-3">
+              <li>
+                <a href="https://stihi.ru/avtor/juliasamoilova1" target="_blank" rel="noopener noreferrer" className="font-serif text-lg transition-colors hover:underline" style={{ color: '#4A3020' }}>
+                  Стихи.ру ↗
+                </a>
+              </li>
+              <li>
+                <span className="font-serif text-lg" style={{ color: '#4A3020' }}>Санкт-Петербург, Россия</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="spb-ornament mb-6" />
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 font-serif text-base" style={{ color: '#3C2415' }}>
+          <p>&copy; 2025 Юлия Самойлова. Все права защищены.</p>
+          <div className="flex items-center gap-4">
+            <a href="/admin" className="transition-colors hover:underline font-semibold" style={{ color: '#A68B3E' }}>
+              admin
+            </a>
+            <p className="font-semibold" style={{ color: '#C8A45C' }}>Создано с ♡ в Санкт-Петербурге</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState(categories[0]);
-  const [currentTrack, setCurrentTrack] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isReady, setIsReady] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const progressRef = useRef<HTMLInputElement>(null);
-
-  const filteredPoems = poems.filter(p => p.category === activeTab);
-
-  const updateProgress = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio && audio.duration) {
-      setProgress((audio.currentTime / audio.duration) * 100);
-      setCurrentTime(audio.currentTime);
-    }
-  }, []);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onLoadedMetadata = () => {
-      setDuration(audio.duration);
-      setIsReady(true);
-    };
-
-    const onCanPlayThrough = () => {
-      setIsReady(true);
-    };
-
-    const onTimeUpdate = updateProgress;
-    const onEnded = () => {
-      setIsPlaying(false);
-      setProgress(0);
-      setCurrentTime(0);
-    };
-    const onError = () => {
-      setIsReady(false);
-      setIsPlaying(false);
-    };
-
-    audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('canplaythrough', onCanPlayThrough);
-    audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
-
-    return () => {
-      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-      audio.removeEventListener('canplaythrough', onCanPlayThrough);
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
-    };
-  }, [updateProgress]);
-
-  const switchTrack = (index: number) => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-    }
-    setCurrentTrack(index);
-    setIsPlaying(false);
-    setProgress(0);
-    setCurrentTime(0);
-    setDuration(0);
-    setIsReady(false);
-  };
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      if (!isReady && audio.readyState < 2) {
-        // Audio not loaded yet — force load then play
-        audio.load();
-        audio.addEventListener('canplaythrough', function onReady() {
-          audio.removeEventListener('canplaythrough', onReady);
-          audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-        }, { once: true });
-      } else {
-        audio.play().then(() => setIsPlaying(true)).catch(() => {
-          setIsPlaying(false);
-          // Retry once after a short delay
-          setTimeout(() => {
-            audio.load();
-            audio.addEventListener('canplaythrough', function onReady() {
-              audio.removeEventListener('canplaythrough', onReady);
-              audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-            }, { once: true });
-          }, 300);
-        });
-      }
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    const seekTime = (parseFloat(e.target.value) / 100) * duration;
-    audio.currentTime = seekTime;
-    setCurrentTime(seekTime);
-    setProgress(parseFloat(e.target.value));
-  };
-
   return (
-    <main className="min-h-screen flex flex-col">
-      {/* Hero Section */}
-      <section
-        className="hero-bg relative w-full h-[50vh] md:min-h-[65vh] lg:min-h-[75vh] bg-no-repeat"
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 md:pb-16 px-4">
-          <Link
-            href="#poems"
-            className="px-8 py-3.5 bg-[#C8A45C] hover:bg-[#b8943e] text-white font-medium rounded-full transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-base md:text-lg tracking-wide"
-          >
-            Открыть мир стихов
-          </Link>
-        </div>
-      </section>
-
-      {/* Music Player Section */}
-      <section className="w-full bg-[#3C2415] py-6 md:py-8">
-        <div className="max-w-3xl mx-auto px-4 md:px-6">
-          <div className="flex items-center gap-3 mb-4">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8A45C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18V5l12-2v13" />
-              <circle cx="6" cy="18" r="3" />
-              <circle cx="18" cy="16" r="3" />
-            </svg>
-            <h2 className="text-[#C8A45C] font-serif text-lg md:text-xl font-semibold">Музыка и стихи</h2>
-          </div>
-
-          {/* Track Selection */}
-          <div className="flex gap-3 mb-5">
-            {tracks.map((track, i) => (
-              <button
-                key={i}
-                onClick={() => switchTrack(i)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer ${
-                  currentTrack === i
-                    ? 'bg-[#C8A45C] text-[#3C2415] shadow-md'
-                    : 'bg-[#4a3322] text-[#D4C5B5] hover:bg-[#5a4332] hover:text-white'
-                }`}
-              >
-                {track.title}
-              </button>
-            ))}
-          </div>
-
-          {/* Player Controls */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={togglePlay}
-              disabled={!isReady}
-              className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                isReady
-                  ? 'bg-[#C8A45C] hover:bg-[#b8943e] text-[#3C2415] shadow-lg hover:scale-110'
-                  : 'bg-[#4a3322] text-[#8B7355] cursor-wait'
-              }`}
-            >
-              {!isReady ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="animate-spin">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              ) : isPlaying ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5,3 19,12 5,21" />
-                </svg>
-              )}
-            </button>
-
-            <div className="flex-1 flex items-center gap-3">
-              <span className="text-[#D4C5B5] text-xs font-mono w-10 text-right tabular-nums">
-                {formatTime(currentTime)}
-              </span>
-              <div className="flex-1 relative h-5 flex items-center">
-                <div className="w-full h-1 bg-[#5a4332] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#C8A45C] rounded-full transition-all duration-100"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <input
-                  ref={progressRef}
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={progress}
-                  onChange={handleSeek}
-                  className="player-progress absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  style={{ background: 'transparent' }}
-                />
-              </div>
-              <span className="text-[#D4C5B5] text-xs font-mono w-10 tabular-nums">
-                {formatTime(duration)}
-              </span>
-            </div>
-          </div>
-
-          <p className="text-[#8B7355] text-xs mt-3 italic">
-            {tracks[currentTrack].title}
-          </p>
-
-          <audio
-            ref={audioRef}
-            preload="auto"
-            key={currentTrack}
-            src={tracks[currentTrack].src}
-            onLoadedMetadata={() => {
-              const audio = audioRef.current;
-              if (audio) {
-                setDuration(audio.duration);
-                setIsReady(true);
-              }
-            }}
-            onCanPlayThrough={() => setIsReady(true)}
-            onTimeUpdate={() => {
-              const audio = audioRef.current;
-              if (audio && audio.duration) {
-                setProgress((audio.currentTime / audio.duration) * 100);
-                setCurrentTime(audio.currentTime);
-              }
-            }}
-            onEnded={() => {
-              setIsPlaying(false);
-              setProgress(0);
-              setCurrentTime(0);
-            }}
-            onError={() => {
-              setIsReady(false);
-              setIsPlaying(false);
-            }}
-          />
-        </div>
-      </section>
-
-      {/* Poetry Tabs Section */}
-      <section id="poems" className="flex-1 w-full bg-[#F5F0EB] py-10 md:py-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-6">
-          {/* Mobile: Photo above tabs */}
-          <div className="md:hidden mb-8">
-            <div className="relative rounded-2xl overflow-hidden shadow-xl">
-              <img
-                src="/juliasamoilova1.jpg"
-                alt="Юлия Самойлова"
-                className="w-full h-64 md:h-80 object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#3C2415]/40 to-transparent" />
-            </div>
-          </div>
-
-          {/* Section Title */}
-          <div className="text-center mb-8 md:mb-10">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#3C2415] mb-3">
-              Стихотворения
-            </h2>
-            <div className="w-20 h-0.5 bg-[#C8A45C] mx-auto" />
-          </div>
-
-          {/* Category Tabs */}
-          <div className="mb-6 overflow-x-auto tabs-scroll pb-1">
-            <div className="flex gap-2 min-w-max md:justify-center md:flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveTab(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap cursor-pointer ${
-                    activeTab === cat
-                      ? 'bg-[#3C2415] text-white shadow-md'
-                      : 'bg-[#EDE6DD] text-[#8B7355] hover:bg-[#D4C5B5] hover:text-[#3C2415]'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Poems + Photo Layout */}
-          <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-            {/* Poem List */}
-            <div className="flex-1">
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-[#D4C5B5]/50 shadow-sm p-4 md:p-6">
-                <div className="max-h-96 overflow-y-auto poem-list pr-2">
-                  {filteredPoems.length === 0 ? (
-                    <p className="text-[#8B7355] text-center py-8 italic">
-                      В этой категории пока нет стихотворений
-                    </p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {filteredPoems.map((poem, idx) => {
-                        const poemIndex = poems.indexOf(poem);
-                        return (
-                          <li key={poemIndex}>
-                            <Link
-                              href={`/poem/${poemIndex}`}
-                              className="block py-3 px-4 rounded-xl text-[#3C2415] hover:bg-[#F5F0EB] transition-all duration-200 group border-b border-[#EDE6DD] last:border-0"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="group-hover:text-[#C8A45C] transition-colors duration-200 text-sm md:text-base font-medium">
-                                  {poem.title}
-                                </span>
-                                <span className="text-xs text-[#8B7355] ml-3 flex-shrink-0">
-                                  {poem.year}
-                                </span>
-                              </div>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-                <p className="text-xs text-[#8B7355] mt-4 text-center">
-                  {filteredPoems.length} {filteredPoems.length === 1 ? 'стихотворение' : filteredPoems.length < 5 ? 'стихотворения' : 'стихотворений'}
-                </p>
-              </div>
-            </div>
-
-            {/* Desktop: Photo on right side */}
-            <div className="hidden md:block flex-shrink-0">
-              <div className="relative rounded-2xl overflow-hidden shadow-xl w-full lg:w-80 h-[480px] lg:h-[560px]">
-                <img
-                  src="/juliasamoilova1.jpg"
-                  alt="Юлия Самойлова"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#3C2415]/50 to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6">
-                  <p className="text-white font-serif text-xl font-semibold drop-shadow-lg">
-                    Юлия Самойлова
-                  </p>
-                  <p className="text-white/80 text-sm mt-1 drop-shadow">
-                    Санкт-Петербург
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="w-full bg-[#3C2415] py-6 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 flex flex-col items-center gap-3">
-          <p className="text-[#D4C5B5] text-sm">
-            © 2026 Юлия Самойлова. Все права защищены.
-          </p>
-          <Link
-            href="/admin"
-            className="text-[#8B7355] text-xs hover:text-[#C8A45C] transition-colors duration-200"
-          >
-            admin
-          </Link>
-        </div>
-      </footer>
-    </main>
-  );
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#FAF7F2' }}>
+      <Header />
+      <main className="flex-1">
+        <Hero />
+        <Divider />
+        <About />
+        <Divider />
+        <PetersburgSection />
+        <Divider />
+        <CreativeTextSection />
+        <Divider />
+        <QuoteBanner />
+        <Divider />
+        <PoetryTabs />
+        <Divider />
+        <AboutYuriy />
+        <Divider />
+        <MusicPlayer />
+        <Divider />
+        <FeedbackForm />
+      </main>
+      <Footer />
+    </div>
+  )
 }
