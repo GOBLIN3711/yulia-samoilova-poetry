@@ -25,6 +25,12 @@ export default function MusicPlayer() {
   const [showVolume, setShowVolume] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Ref to track whether we intend to play (handles race conditions)
+  const pendingPlay = useRef(false)
+  // Ref to track retry attempts
+  const playRetryCount = useRef(0)
+  const playRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Load tracks on mount
   useEffect(() => {
     fetch('/api/poems?action=tracks')
@@ -52,11 +58,91 @@ export default function MusicPlayer() {
 
   const track = tracks[currentTrack] || { title: 'Нет треков', duration: '0:00', file: '' }
 
+  // Safe play function with retry logic
+  const safePlay = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio || !audio.src) return
+
+    // Reset volume explicitly to prevent "no sound" state
+    audio.volume = volume
+
+    const doPlay = () => {
+      if (!audioRef.current) return
+      const playPromise = audioRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Successfully playing
+            playRetryCount.current = 0
+            pendingPlay.current = false
+          })
+          .catch((err) => {
+            console.warn('Play failed:', err?.name || err)
+            // AbortError = play was interrupted (e.g. user clicked pause quickly)
+            if (err?.name === 'AbortError') {
+              pendingPlay.current = false
+              return
+            }
+            // NotAllowedError = browser blocked autoplay (user interaction needed)
+            if (err?.name === 'NotAllowedError') {
+              setIsPlaying(false)
+              pendingPlay.current = false
+              playRetryCount.current = 0
+              return
+            }
+            // Retry up to 3 times with increasing delay
+            playRetryCount.current += 1
+            if (playRetryCount.current <= 3) {
+              const delay = 300 * playRetryCount.current
+              console.log(`Retrying play in ${delay}ms (attempt ${playRetryCount.current})`)
+              playRetryTimer.current = setTimeout(doPlay, delay)
+            } else {
+              console.error('Max play retries reached, giving up')
+              setIsPlaying(false)
+              pendingPlay.current = false
+              playRetryCount.current = 0
+              // Try reloading the audio as last resort
+              try {
+                audioRef.current?.load()
+              } catch (e) {
+                // ignore
+              }
+            }
+          })
+      }
+    }
+
+    // Check if audio is ready enough to play
+    if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or better
+      doPlay()
+    } else {
+      // Audio not ready yet — wait for canplay event
+      pendingPlay.current = true
+      const onCanPlay = () => {
+        audio.removeEventListener('canplaythrough', onCanPlay)
+        audio.removeEventListener('canplay', onCanPlay)
+        if (pendingPlay.current) {
+          doPlay()
+        }
+      }
+      audio.addEventListener('canplaythrough', onCanPlay, { once: true })
+      audio.addEventListener('canplay', onCanPlay, { once: true })
+      // Also set a safety timeout — if audio doesn't become ready in 5s, try anyway
+      setTimeout(() => {
+        if (pendingPlay.current) {
+          doPlay()
+        }
+      }, 5000)
+    }
+  }, [volume])
+
   // Handle track end - continuous playback
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
     const onEnded = () => {
+      playRetryCount.current = 0
+      pendingPlay.current = false
       const next = currentTrack + 1
       if (next < tracks.length) {
         setCurrentTrack(next)
@@ -70,29 +156,115 @@ export default function MusicPlayer() {
     return () => audio.removeEventListener('ended', onEnded)
   }, [currentTrack, tracks.length, repeat])
 
+  // Handle audio errors
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const onError = (e: Event) => {
+      console.error('Audio error:', (e.target as HTMLAudioElement).error)
+      setIsPlaying(false)
+      pendingPlay.current = false
+      playRetryCount.current = 0
+    }
+    audio.addEventListener('error', onError)
+    return () => audio.removeEventListener('error', onError)
+  }, [])
+
+  // Handle "stalled" and "waiting" events — audio data stopped arriving
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const onStalled = () => {
+      console.warn('Audio stalled — network issue')
+    }
+    const onWaiting = () => {
+      console.log('Audio waiting for data...')
+    }
+    audio.addEventListener('stalled', onStalled)
+    audio.addEventListener('waiting', onWaiting)
+    return () => {
+      audio.removeEventListener('stalled', onStalled)
+      audio.removeEventListener('waiting', onWaiting)
+    }
+  }, [])
+
   // Load audio source when track file changes (including initial load)
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !track.file) return
+
+    // Clean up any pending retries
+    if (playRetryTimer.current) {
+      clearTimeout(playRetryTimer.current)
+      playRetryTimer.current = null
+    }
+    playRetryCount.current = 0
+
+    audio.pause()
+    audio.currentTime = 0
+    setCurrentTime(0)
+    setDuration(0)
+
     audio.src = track.file
     if (track.file.startsWith('http')) {
       audio.crossOrigin = 'anonymous'
     } else {
       audio.removeAttribute('crossorigin')
     }
+    audio.preload = 'auto'
+    audio.volume = volume
     audio.load()
-  }, [track.file])
+
+    // If we want to play this track, wait for it to be ready
+    if (pendingPlay.current || isPlaying) {
+      const onReady = () => {
+        audio.removeEventListener('canplaythrough', onReady)
+        audio.removeEventListener('canplay', onReady)
+        if (pendingPlay.current) {
+          safePlay()
+        }
+      }
+      audio.addEventListener('canplaythrough', onReady, { once: true })
+      audio.addEventListener('canplay', onReady, { once: true })
+    }
+  }, [track.file]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Play/pause when isPlaying changes
   useEffect(() => {
     const audio = audioRef.current
     if (!audio || !audio.src) return
+
     if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false))
+      pendingPlay.current = true
+      safePlay()
     } else {
+      pendingPlay.current = false
+      // Clear any pending retries
+      if (playRetryTimer.current) {
+        clearTimeout(playRetryTimer.current)
+        playRetryTimer.current = null
+      }
+      playRetryCount.current = 0
       audio.pause()
     }
-  }, [isPlaying])
+  }, [isPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Verify audio is actually producing sound via 'playing' event
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const onActuallyPlaying = () => {
+      // 'playing' event fires when audio actually starts producing sound
+      // This is different from 'play' which fires when playback is requested
+      console.log('Audio is actually producing sound now')
+      // Double-check volume is correct
+      if (audio.volume === 0 && volume > 0) {
+        audio.volume = volume
+      }
+    }
+    audio.addEventListener('playing', onActuallyPlaying)
+    return () => audio.removeEventListener('playing', onActuallyPlaying)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Time updates — audio element is always in DOM, so ref is always valid
   useEffect(() => {
@@ -115,8 +287,19 @@ export default function MusicPlayer() {
 
   // Volume
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
+    if (audioRef.current) {
+      audioRef.current.volume = volume
+    }
   }, [volume])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (playRetryTimer.current) {
+        clearTimeout(playRetryTimer.current)
+      }
+    }
+  }, [])
 
   // Progress bar drag support
   const isDragging = useRef(false)
@@ -167,8 +350,6 @@ export default function MusicPlayer() {
     const sec = Math.floor(s % 60)
     return `${m}:${sec.toString().padStart(2, '0')}`
   }
-
-
 
   const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -226,7 +407,7 @@ export default function MusicPlayer() {
           )}
         </div>
 
-        <audio ref={audioRef} preload="metadata" />
+        <audio ref={audioRef} preload="auto" />
 
         {isLoading ? (
           <div className="text-center py-8">
@@ -340,7 +521,16 @@ export default function MusicPlayer() {
               {showList && (
                 <div className="max-h-72 overflow-y-auto" style={{ borderTop: '1px solid rgba(60,36,21,0.06)' }}>
                   {tracks.map((t, i) => (
-                    <button key={t.id} onClick={() => { setCurrentTrack(i); setIsPlaying(true); }} className="w-full text-left px-6 py-3 flex items-center gap-3 transition-colors hover:bg-white/60" style={{
+                    <button key={t.id} onClick={() => {
+                      // Reset retry state when switching tracks
+                      playRetryCount.current = 0
+                      if (playRetryTimer.current) {
+                        clearTimeout(playRetryTimer.current)
+                        playRetryTimer.current = null
+                      }
+                      setCurrentTrack(i)
+                      setIsPlaying(true)
+                    }} className="w-full text-left px-6 py-3 flex items-center gap-3 transition-colors hover:bg-white/60" style={{
                       background: i === currentTrack ? 'rgba(200,164,92,0.08)' : 'transparent',
                       borderBottom: '1px solid rgba(60,36,21,0.03)',
                     }}>

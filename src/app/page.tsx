@@ -32,9 +32,13 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative min-h-screen flex items-end justify-center overflow-hidden pb-20 md:pb-28">
+    <section className="relative min-h-[100svh] min-h-screen flex items-end justify-center overflow-hidden pb-20 md:pb-28">
       <div className="absolute inset-0 z-0">
-        <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover object-center" />
+        {/* Mobile: use shorter image so text is fully visible. Desktop: full hero. */}
+        <picture>
+          <source media="(max-width: 767px)" srcSet="/v2_hero_mobile.png" />
+          <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover md:object-center" style={{ objectPosition: 'center top' }} />
+        </picture>
         <div className="hero-overlay absolute inset-0" />
         {/* Extra dark gradient at bottom for button readability */}
         <div className="absolute bottom-0 left-0 right-0 h-48 md:h-56" style={{
