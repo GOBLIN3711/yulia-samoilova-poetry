@@ -91,18 +91,48 @@ export default function Home() {
     };
   }, [updateProgress]);
 
+  const switchTrack = (index: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+    }
+    setCurrentTrack(index);
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsReady(false);
+  };
+
   const togglePlay = () => {
     const audio = audioRef.current;
-    if (!audio || !isReady) return;
+    if (!audio) return;
 
     if (isPlaying) {
       audio.pause();
+      setIsPlaying(false);
     } else {
-      audio.play().catch(() => {
-        setIsPlaying(false);
-      });
+      if (!isReady && audio.readyState < 2) {
+        // Audio not loaded yet — force load then play
+        audio.load();
+        audio.addEventListener('canplaythrough', function onReady() {
+          audio.removeEventListener('canplaythrough', onReady);
+          audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        }, { once: true });
+      } else {
+        audio.play().then(() => setIsPlaying(true)).catch(() => {
+          setIsPlaying(false);
+          // Retry once after a short delay
+          setTimeout(() => {
+            audio.load();
+            audio.addEventListener('canplaythrough', function onReady() {
+              audio.removeEventListener('canplaythrough', onReady);
+              audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            }, { once: true });
+          }, 300);
+        });
+      }
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,28 +144,11 @@ export default function Home() {
     setProgress(parseFloat(e.target.value));
   };
 
-  const switchTrack = (index: number) => {
-    setCurrentTrack(index);
-    setIsPlaying(false);
-    setProgress(0);
-    setCurrentTime(0);
-    setDuration(0);
-    setIsReady(false);
-    // Force reload
-    setTimeout(() => {
-      const audio = audioRef.current;
-      if (audio) {
-        audio.load();
-      }
-    }, 50);
-  };
-
   return (
     <main className="min-h-screen flex flex-col">
       {/* Hero Section */}
       <section
-        className="relative w-full min-h-[55vh] md:min-h-[65vh] lg:min-h-[75vh] bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/v2_hero.png')" }}
+        className="hero-bg relative w-full h-[50vh] md:min-h-[65vh] lg:min-h-[75vh] bg-no-repeat"
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-12 md:pb-16 px-4">
@@ -239,9 +252,33 @@ export default function Home() {
 
           <audio
             ref={audioRef}
-            preload="metadata"
+            preload="auto"
             key={currentTrack}
             src={tracks[currentTrack].src}
+            onLoadedMetadata={() => {
+              const audio = audioRef.current;
+              if (audio) {
+                setDuration(audio.duration);
+                setIsReady(true);
+              }
+            }}
+            onCanPlayThrough={() => setIsReady(true)}
+            onTimeUpdate={() => {
+              const audio = audioRef.current;
+              if (audio && audio.duration) {
+                setProgress((audio.currentTime / audio.duration) * 100);
+                setCurrentTime(audio.currentTime);
+              }
+            }}
+            onEnded={() => {
+              setIsPlaying(false);
+              setProgress(0);
+              setCurrentTime(0);
+            }}
+            onError={() => {
+              setIsReady(false);
+              setIsPlaying(false);
+            }}
           />
         </div>
       </section>

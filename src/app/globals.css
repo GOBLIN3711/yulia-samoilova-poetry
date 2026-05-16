@@ -79,6 +79,20 @@ body {
   cursor: pointer;
 }
 
+/* Hero background image - mobile vs desktop */
+.hero-bg {
+  background-image: url('/v2_hero.png');
+  background-size: cover;
+  background-position: center;
+}
+
+@media (max-width: 767px) {
+  .hero-bg {
+    background-image: url('/v2_hero_mobile.png');
+    background-position: center top;
+  }
+}
+
 /* Category tabs custom scrollbar */
 .tabs-scroll::-webkit-scrollbar {
   height: 3px;
