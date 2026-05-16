@@ -32,32 +32,53 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative min-h-[100svh] min-h-screen flex items-end justify-center overflow-hidden pb-20 md:pb-28">
-      <div className="absolute inset-0 z-0">
-        {/* Mobile: use shorter image so text is fully visible. Desktop: full hero. */}
-        <picture>
-          <source media="(max-width: 767px)" srcSet="/v2_hero_mobile.png" />
-          <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover md:object-center" style={{ objectPosition: 'center top' }} />
-        </picture>
-        <div className="hero-overlay absolute inset-0" />
-        {/* Extra dark gradient at bottom for button readability */}
-        <div className="absolute bottom-0 left-0 right-0 h-48 md:h-56" style={{
-          background: 'linear-gradient(to top, rgba(20, 12, 5, 0.7) 0%, rgba(20, 12, 5, 0.4) 40%, transparent 100%)',
-        }} />
-      </div>
-      <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl mx-auto mb-4">
-        <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-10 py-4 font-serif text-base md:text-lg">
-          Открыть мир стихов
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    <section className="relative overflow-hidden">
+      {/* ─── Desktop: full-screen hero ─── */}
+      <div className="hidden md:block relative min-h-screen flex items-end justify-center pb-28">
+        <div className="absolute inset-0 z-0">
+          <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover object-center" />
+          <div className="hero-overlay absolute inset-0" />
+          <div className="absolute bottom-0 left-0 right-0 h-56" style={{
+            background: 'linear-gradient(to top, rgba(20, 12, 5, 0.7) 0%, rgba(20, 12, 5, 0.4) 40%, transparent 100%)',
+          }} />
+        </div>
+        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto mb-4">
+          <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-10 py-4 font-serif text-lg">
+            Открыть мир стихов
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </a>
+        </div>
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 animate-float">
+          <svg className="w-6 h-6" style={{ color: 'rgba(200, 164, 92, 0.4)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7" />
           </svg>
-        </a>
+        </div>
       </div>
-      {/* Scroll indicator */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 animate-float">
-        <svg className="w-6 h-6" style={{ color: 'rgba(200, 164, 92, 0.4)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7" />
-        </svg>
+
+      {/* ─── Mobile: image flows naturally, fully visible ─── */}
+      <div className="md:hidden relative">
+        <img
+          src="/v2_hero_mobile.png"
+          alt="Юлия Самойлова — Поэтесса из Санкт-Петербурга"
+          className="w-full h-auto block"
+          style={{ display: 'block' }}
+        />
+        {/* Overlay gradient */}
+        <div className="hero-overlay absolute inset-0" />
+        <div className="absolute bottom-0 left-0 right-0 h-28" style={{
+          background: 'linear-gradient(to top, rgba(20, 12, 5, 0.65) 0%, rgba(20, 12, 5, 0.3) 50%, transparent 100%)',
+        }} />
+        {/* Button at the bottom of the image */}
+        <div className="absolute bottom-5 left-0 right-0 z-10 text-center px-4">
+          <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-8 py-3.5 font-serif text-base">
+            Открыть мир стихов
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </a>
+        </div>
       </div>
     </section>
   )

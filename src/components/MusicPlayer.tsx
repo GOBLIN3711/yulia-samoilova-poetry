@@ -2,17 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Howl } from 'howler'
 
 interface Track {
   id: number
   title: string
   duration: string
-  file: string // Can be local path (/music/track.mp3) or full URL (https://...supabase.co/...)
+  file: string
   date?: string
 }
 
 export default function MusicPlayer() {
-  const audioRef = useRef<HTMLAudioElement>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const [tracks, setTracks] = useState<Track[]>([])
   const [currentTrack, setCurrentTrack] = useState(0)
@@ -24,12 +24,12 @@ export default function MusicPlayer() {
   const [volume, setVolume] = useState(0.8)
   const [showVolume, setShowVolume] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [trackLoading, setTrackLoading] = useState(false)
 
-  // Ref to track whether we intend to play (handles race conditions)
-  const pendingPlay = useRef(false)
-  // Ref to track retry attempts
-  const playRetryCount = useRef(0)
-  const playRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Howler refs
+  const howlRef = useRef<Howl | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const pendingPlayRef = useRef(false)
 
   // Load tracks on mount
   useEffect(() => {
@@ -39,11 +39,8 @@ export default function MusicPlayer() {
         if (data.tracks && data.tracks.length > 0) {
           setTracks(data.tracks)
         } else {
-          // Default placeholder tracks
           setTracks([
             { id: 1, title: 'Паутинками судеб', duration: '3:42', file: '/music/track1.mp3' },
-            { id: 2, title: 'Слушай тишину', duration: '4:15', file: '/music/track2.mp3' },
-            { id: 3, title: 'К победе вместе все пришли!', duration: '3:58', file: '/music/track3.mp3' },
           ])
         }
         setIsLoading(false)
@@ -58,259 +55,142 @@ export default function MusicPlayer() {
 
   const track = tracks[currentTrack] || { title: 'Нет треков', duration: '0:00', file: '' }
 
-  // Safe play function with retry logic
-  const safePlay = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio || !audio.src) return
-
-    // Reset volume explicitly to prevent "no sound" state
-    audio.volume = volume
-
-    const doPlay = () => {
-      if (!audioRef.current) return
-      const playPromise = audioRef.current.play()
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            // Successfully playing
-            playRetryCount.current = 0
-            pendingPlay.current = false
-          })
-          .catch((err) => {
-            console.warn('Play failed:', err?.name || err)
-            // AbortError = play was interrupted (e.g. user clicked pause quickly)
-            if (err?.name === 'AbortError') {
-              pendingPlay.current = false
-              return
-            }
-            // NotAllowedError = browser blocked autoplay (user interaction needed)
-            if (err?.name === 'NotAllowedError') {
-              setIsPlaying(false)
-              pendingPlay.current = false
-              playRetryCount.current = 0
-              return
-            }
-            // Retry up to 3 times with increasing delay
-            playRetryCount.current += 1
-            if (playRetryCount.current <= 3) {
-              const delay = 300 * playRetryCount.current
-              console.log(`Retrying play in ${delay}ms (attempt ${playRetryCount.current})`)
-              playRetryTimer.current = setTimeout(doPlay, delay)
-            } else {
-              console.error('Max play retries reached, giving up')
-              setIsPlaying(false)
-              pendingPlay.current = false
-              playRetryCount.current = 0
-              // Try reloading the audio as last resort
-              try {
-                audioRef.current?.load()
-              } catch (e) {
-                // ignore
-              }
-            }
-          })
-      }
-    }
-
-    // Check if audio is ready enough to play
-    if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or better
-      doPlay()
-    } else {
-      // Audio not ready yet — wait for canplay event
-      pendingPlay.current = true
-      const onCanPlay = () => {
-        audio.removeEventListener('canplaythrough', onCanPlay)
-        audio.removeEventListener('canplay', onCanPlay)
-        if (pendingPlay.current) {
-          doPlay()
-        }
-      }
-      audio.addEventListener('canplaythrough', onCanPlay, { once: true })
-      audio.addEventListener('canplay', onCanPlay, { once: true })
-      // Also set a safety timeout — if audio doesn't become ready in 5s, try anyway
-      setTimeout(() => {
-        if (pendingPlay.current) {
-          doPlay()
-        }
-      }, 5000)
-    }
-  }, [volume])
-
-  // Handle track end - continuous playback
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onEnded = () => {
-      playRetryCount.current = 0
-      pendingPlay.current = false
-      const next = currentTrack + 1
-      if (next < tracks.length) {
-        setCurrentTrack(next)
-      } else if (repeat) {
-        setCurrentTrack(0)
-      } else {
-        setIsPlaying(false)
-      }
-    }
-    audio.addEventListener('ended', onEnded)
-    return () => audio.removeEventListener('ended', onEnded)
-  }, [currentTrack, tracks.length, repeat])
-
-  // Handle audio errors
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onError = (e: Event) => {
-      console.error('Audio error:', (e.target as HTMLAudioElement).error)
-      setIsPlaying(false)
-      pendingPlay.current = false
-      playRetryCount.current = 0
-    }
-    audio.addEventListener('error', onError)
-    return () => audio.removeEventListener('error', onError)
-  }, [])
-
-  // Handle "stalled" and "waiting" events — audio data stopped arriving
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onStalled = () => {
-      console.warn('Audio stalled — network issue')
-    }
-    const onWaiting = () => {
-      console.log('Audio waiting for data...')
-    }
-    audio.addEventListener('stalled', onStalled)
-    audio.addEventListener('waiting', onWaiting)
-    return () => {
-      audio.removeEventListener('stalled', onStalled)
-      audio.removeEventListener('waiting', onWaiting)
+  // Stop RAF loop
+  const stopRaf = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
     }
   }, [])
 
-  // Load audio source when track file changes (including initial load)
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || !track.file) return
-
-    // Clean up any pending retries
-    if (playRetryTimer.current) {
-      clearTimeout(playRetryTimer.current)
-      playRetryTimer.current = null
+  // RAF-based time tracking (Howl doesn't fire timeupdate events)
+  const startTimeTracking = useCallback(() => {
+    stopRaf()
+    const tick = () => {
+      if (howlRef.current && howlRef.current.playing()) {
+        setCurrentTime(howlRef.current.seek() as number)
+        rafRef.current = requestAnimationFrame(tick)
+      }
     }
-    playRetryCount.current = 0
+    rafRef.current = requestAnimationFrame(tick)
+  }, [stopRaf])
 
-    audio.pause()
-    audio.currentTime = 0
+  // Stop current howl
+  const stopCurrent = useCallback(() => {
+    stopRaf()
+    if (howlRef.current) {
+      howlRef.current.unload()
+      howlRef.current = null
+    }
     setCurrentTime(0)
     setDuration(0)
+    setTrackLoading(false)
+    pendingPlayRef.current = false
+  }, [stopRaf])
 
-    audio.src = track.file
-    if (track.file.startsWith('http')) {
-      audio.crossOrigin = 'anonymous'
-    } else {
-      audio.removeAttribute('crossorigin')
-    }
-    audio.preload = 'auto'
-    audio.volume = volume
-    audio.load()
+  // Load and optionally play a track using Howler
+  const loadTrack = useCallback((file: string, shouldPlay: boolean) => {
+    stopCurrent()
 
-    // If we want to play this track, wait for it to be ready
-    if (pendingPlay.current || isPlaying) {
-      const onReady = () => {
-        audio.removeEventListener('canplaythrough', onReady)
-        audio.removeEventListener('canplay', onReady)
-        if (pendingPlay.current) {
-          safePlay()
+    if (!file) return
+
+    setTrackLoading(true)
+
+    const howl = new Howl({
+      src: [file],
+      html5: true,           // Use HTML5 Audio for streaming (better for large files)
+      preload: true,
+      volume: volume,
+      loop: false,
+      onplay: () => {
+        setIsPlaying(true)
+        setTrackLoading(false)
+        pendingPlayRef.current = false
+        startTimeTracking()
+      },
+      onpause: () => {
+        setIsPlaying(false)
+        stopRaf()
+      },
+      onstop: () => {
+        setIsPlaying(false)
+        stopRaf()
+      },
+      onend: () => {
+        // Track finished — go to next or repeat
+        stopRaf()
+        setIsPlaying(false)
+        const next = currentTrack + 1
+        if (next < tracks.length) {
+          setCurrentTrack(next)
+        } else if (repeat) {
+          setCurrentTrack(0)
+        } else {
+          // Stay stopped
         }
+      },
+      onload: () => {
+        const dur = howl.duration()
+        setDuration(dur)
+        setTrackLoading(false)
+      },
+      onloaderror: (id, err) => {
+        console.error('Howl load error:', err)
+        setTrackLoading(false)
+        setIsPlaying(false)
+        pendingPlayRef.current = false
+      },
+      onplayerror: (id, err) => {
+        console.error('Howl play error:', err)
+        // Try unlocking audio (common on mobile)
+        howl.once('unlock', () => {
+          if (pendingPlayRef.current) {
+            howl.play()
+          }
+        })
+      },
+    })
+
+    howlRef.current = howl
+
+    if (shouldPlay) {
+      pendingPlayRef.current = true
+      howl.play()
+    }
+  }, [stopCurrent, volume, startTimeTracking, currentTrack, tracks.length, repeat])
+
+  // Load track when file changes
+  useEffect(() => {
+    if (track.file) {
+      loadTrack(track.file, pendingPlayRef.current || isPlaying)
+    }
+    return () => {
+      // Cleanup on unmount
+      if (howlRef.current) {
+        howlRef.current.unload()
+        howlRef.current = null
       }
-      audio.addEventListener('canplaythrough', onReady, { once: true })
-      audio.addEventListener('canplay', onReady, { once: true })
     }
   }, [track.file]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Play/pause when isPlaying changes
+  // Volume sync
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio || !audio.src) return
-
-    if (isPlaying) {
-      pendingPlay.current = true
-      safePlay()
-    } else {
-      pendingPlay.current = false
-      // Clear any pending retries
-      if (playRetryTimer.current) {
-        clearTimeout(playRetryTimer.current)
-        playRetryTimer.current = null
-      }
-      playRetryCount.current = 0
-      audio.pause()
-    }
-  }, [isPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Verify audio is actually producing sound via 'playing' event
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onActuallyPlaying = () => {
-      // 'playing' event fires when audio actually starts producing sound
-      // This is different from 'play' which fires when playback is requested
-      console.log('Audio is actually producing sound now')
-      // Double-check volume is correct
-      if (audio.volume === 0 && volume > 0) {
-        audio.volume = volume
-      }
-    }
-    audio.addEventListener('playing', onActuallyPlaying)
-    return () => audio.removeEventListener('playing', onActuallyPlaying)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Time updates — audio element is always in DOM, so ref is always valid
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    const onTime = () => setCurrentTime(audio.currentTime)
-    const onLoaded = () => setDuration(audio.duration)
-    const onDuration = () => {
-      if (audio.duration && isFinite(audio.duration)) setDuration(audio.duration)
-    }
-    audio.addEventListener('timeupdate', onTime)
-    audio.addEventListener('loadedmetadata', onLoaded)
-    audio.addEventListener('durationchange', onDuration)
-    return () => {
-      audio.removeEventListener('timeupdate', onTime)
-      audio.removeEventListener('loadedmetadata', onLoaded)
-      audio.removeEventListener('durationchange', onDuration)
-    }
-  }, [])
-
-  // Volume
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume
+    if (howlRef.current) {
+      howlRef.current.volume(volume)
     }
   }, [volume])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (playRetryTimer.current) {
-        clearTimeout(playRetryTimer.current)
-      }
-    }
-  }, [])
 
   // Progress bar drag support
   const isDragging = useRef(false)
 
   const seekToPosition = useCallback((clientX: number) => {
-    if (!progressRef.current || !audioRef.current || !duration) return
+    if (!progressRef.current || !howlRef.current || !duration) return
     const rect = progressRef.current.getBoundingClientRect()
     const x = clientX - rect.left
     const pct = Math.max(0, Math.min(1, x / rect.width))
-    audioRef.current.currentTime = pct * duration
-    setCurrentTime(pct * duration)
+    const seekTime = pct * duration
+    howlRef.current.seek(seekTime)
+    setCurrentTime(seekTime)
   }, [duration])
 
   const handleProgressMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -329,9 +209,7 @@ export default function MusicPlayer() {
       if (!isDragging.current) return
       seekToPosition(e.clientX)
     }
-    const handleMouseUp = () => {
-      isDragging.current = false
-    }
+    const handleMouseUp = () => { isDragging.current = false }
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('touchmove', handleMouseMove as unknown as EventListener)
@@ -357,20 +235,36 @@ export default function MusicPlayer() {
     setVolume(pct)
   }
 
+  const handlePlayPause = () => {
+    if (!howlRef.current) return
+    if (isPlaying) {
+      howlRef.current.pause()
+    } else {
+      pendingPlayRef.current = true
+      howlRef.current.play()
+    }
+  }
+
   const playNext = () => {
     if (currentTrack < tracks.length - 1) setCurrentTrack(prev => prev + 1)
     else if (repeat) setCurrentTrack(0)
-    else setIsPlaying(false)
   }
 
   const playPrev = () => {
-    if (currentTime > 3 && audioRef.current) {
-      audioRef.current.currentTime = 0
+    const curTime = howlRef.current ? (howlRef.current.seek() as number) : 0
+    if (curTime > 3 && howlRef.current) {
+      howlRef.current.seek(0)
+      setCurrentTime(0)
     } else if (currentTrack > 0) {
       setCurrentTrack(prev => prev - 1)
     } else {
       setCurrentTrack(tracks.length - 1)
     }
+  }
+
+  const selectTrack = (index: number) => {
+    pendingPlayRef.current = true
+    setCurrentTrack(index)
   }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
@@ -393,21 +287,28 @@ export default function MusicPlayer() {
           <p className="font-serif text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: '#6B4C3B' }}>
             Стихи Юлии, обретшие мелодию в руках Юрия
           </p>
-          {isPlaying && (
+          {(isPlaying || trackLoading) && (
             <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full" style={{ background: 'rgba(200, 164, 92, 0.1)' }}>
-              <div className="flex items-end gap-[2px] h-4">
-                <div className="w-[2px] rounded-full eq-bar-1" style={{ background: '#C8A45C', height: 6 }} />
-                <div className="w-[2px] rounded-full eq-bar-2" style={{ background: '#C8A45C', height: 10 }} />
-                <div className="w-[2px] rounded-full eq-bar-3" style={{ background: '#C8A45C', height: 8 }} />
-                <div className="w-[2px] rounded-full eq-bar-2" style={{ background: '#C48B7F', height: 12 }} />
-                <div className="w-[2px] rounded-full eq-bar-1" style={{ background: '#C48B7F', height: 7 }} />
-              </div>
-              <span className="text-xs font-serif" style={{ color: '#A68B3E' }}>Сейчас играет</span>
+              {trackLoading ? (
+                <svg className="w-4 h-4 animate-spin" style={{ color: '#C8A45C' }} fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <div className="flex items-end gap-[2px] h-4">
+                  <div className="w-[2px] rounded-full eq-bar-1" style={{ background: '#C8A45C', height: 6 }} />
+                  <div className="w-[2px] rounded-full eq-bar-2" style={{ background: '#C8A45C', height: 10 }} />
+                  <div className="w-[2px] rounded-full eq-bar-3" style={{ background: '#C8A45C', height: 8 }} />
+                  <div className="w-[2px] rounded-full eq-bar-2" style={{ background: '#C48B7F', height: 12 }} />
+                  <div className="w-[2px] rounded-full eq-bar-1" style={{ background: '#C48B7F', height: 7 }} />
+                </div>
+              )}
+              <span className="text-xs font-serif" style={{ color: '#A68B3E' }}>
+                {trackLoading ? 'Загрузка...' : 'Сейчас играет'}
+              </span>
             </div>
           )}
         </div>
-
-        <audio ref={audioRef} preload="auto" />
 
         {isLoading ? (
           <div className="text-center py-8">
@@ -478,12 +379,19 @@ export default function MusicPlayer() {
                   <button onClick={playPrev} className="transition-all hover:scale-110 active:scale-95" style={{ color: '#6B4C3B' }} aria-label="Предыдущий">
                     <svg className="w-6 h-6 md:w-7 md:h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                   </button>
-                  <button onClick={() => setIsPlaying(!isPlaying)} className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95" style={{
-                    background: 'linear-gradient(135deg, #C8A45C, #A68B3E)',
+                  <button onClick={handlePlayPause} className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95" style={{
+                    background: trackLoading
+                      ? 'linear-gradient(135deg, #B8A98A, #9A8A6A)'
+                      : 'linear-gradient(135deg, #C8A45C, #A68B3E)',
                     boxShadow: isPlaying ? '0 4px 20px rgba(200, 164, 92, 0.45)' : '0 4px 16px rgba(200, 164, 92, 0.35)',
                     color: 'white',
                   }} aria-label={isPlaying ? 'Пауза' : 'Воспроизвести'}>
-                    {isPlaying ? (
+                    {trackLoading ? (
+                      <svg className="w-6 h-6 md:w-7 md:h-7 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : isPlaying ? (
                       <svg className="w-6 h-6 md:w-7 md:h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                     ) : (
                       <svg className="w-6 h-6 md:w-7 md:h-7 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -521,16 +429,7 @@ export default function MusicPlayer() {
               {showList && (
                 <div className="max-h-72 overflow-y-auto" style={{ borderTop: '1px solid rgba(60,36,21,0.06)' }}>
                   {tracks.map((t, i) => (
-                    <button key={t.id} onClick={() => {
-                      // Reset retry state when switching tracks
-                      playRetryCount.current = 0
-                      if (playRetryTimer.current) {
-                        clearTimeout(playRetryTimer.current)
-                        playRetryTimer.current = null
-                      }
-                      setCurrentTrack(i)
-                      setIsPlaying(true)
-                    }} className="w-full text-left px-6 py-3 flex items-center gap-3 transition-colors hover:bg-white/60" style={{
+                    <button key={t.id} onClick={() => selectTrack(i)} className="w-full text-left px-6 py-3 flex items-center gap-3 transition-colors hover:bg-white/60" style={{
                       background: i === currentTrack ? 'rgba(200,164,92,0.08)' : 'transparent',
                       borderBottom: '1px solid rgba(60,36,21,0.03)',
                     }}>
