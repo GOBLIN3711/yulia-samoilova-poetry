@@ -25,13 +25,6 @@ function Header() {
             </a>
           ))}
         </nav>
-        <a href="/admin" className="admin-pill flex items-center gap-1.5 font-sans text-sm font-medium px-4 py-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Управление
-        </a>
       </div>
     </header>
   )
@@ -39,12 +32,16 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-screen flex items-end justify-center overflow-hidden pb-20 md:pb-28">
       <div className="absolute inset-0 z-0">
         <img src="/v2_hero.png" alt="Санкт-Петербург" className="absolute inset-0 w-full h-full object-cover object-center" />
         <div className="hero-overlay absolute inset-0" />
+        {/* Extra dark gradient at bottom for button readability */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 md:h-56" style={{
+          background: 'linear-gradient(to top, rgba(20, 12, 5, 0.7) 0%, rgba(20, 12, 5, 0.4) 40%, transparent 100%)',
+        }} />
       </div>
-      <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl mx-auto flex flex-col items-center justify-end" style={{ minHeight: '40vh' }}>
+      <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl mx-auto mb-4">
         <a href="#poetry" className="btn-gold inline-flex items-center gap-2 px-10 py-4 font-serif text-base md:text-lg">
           Открыть мир стихов
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -53,7 +50,7 @@ function Hero() {
         </a>
       </div>
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-float">
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 animate-float">
         <svg className="w-6 h-6" style={{ color: 'rgba(200, 164, 92, 0.4)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7" />
         </svg>
