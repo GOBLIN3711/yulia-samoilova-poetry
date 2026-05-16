@@ -88,6 +88,9 @@ export default function MusicPlayer() {
     pendingPlayRef.current = false
   }, [stopRaf])
 
+  // Ref to track continuous-play intent
+  const continuousPlayRef = useRef(false)
+
   // Load and optionally play a track using Howler
   const loadTrack = useCallback((file: string, shouldPlay: boolean) => {
     stopCurrent()
@@ -98,7 +101,7 @@ export default function MusicPlayer() {
 
     const howl = new Howl({
       src: [file],
-      html5: true,           // Use HTML5 Audio for streaming (better for large files)
+      html5: true,
       preload: true,
       volume: volume,
       loop: false,
@@ -117,16 +120,21 @@ export default function MusicPlayer() {
         stopRaf()
       },
       onend: () => {
-        // Track finished — go to next or repeat
         stopRaf()
-        setIsPlaying(false)
+        // Auto-play next track continuously
         const next = currentTrack + 1
         if (next < tracks.length) {
+          // Signal that we want continuous playback
+          pendingPlayRef.current = true
+          continuousPlayRef.current = true
           setCurrentTrack(next)
         } else if (repeat) {
+          pendingPlayRef.current = true
+          continuousPlayRef.current = true
           setCurrentTrack(0)
         } else {
-          // Stay stopped
+          setIsPlaying(false)
+          continuousPlayRef.current = false
         }
       },
       onload: () => {
@@ -142,7 +150,6 @@ export default function MusicPlayer() {
       },
       onplayerror: (id, err) => {
         console.error('Howl play error:', err)
-        // Try unlocking audio (common on mobile)
         howl.once('unlock', () => {
           if (pendingPlayRef.current) {
             howl.play()
@@ -155,6 +162,7 @@ export default function MusicPlayer() {
 
     if (shouldPlay) {
       pendingPlayRef.current = true
+      continuousPlayRef.current = true
       howl.play()
     }
   }, [stopCurrent, volume, startTimeTracking, currentTrack, tracks.length, repeat])
@@ -238,14 +246,17 @@ export default function MusicPlayer() {
   const handlePlayPause = () => {
     if (!howlRef.current) return
     if (isPlaying) {
+      continuousPlayRef.current = false
       howlRef.current.pause()
     } else {
       pendingPlayRef.current = true
+      continuousPlayRef.current = true
       howlRef.current.play()
     }
   }
 
   const playNext = () => {
+    pendingPlayRef.current = continuousPlayRef.current || isPlaying
     if (currentTrack < tracks.length - 1) setCurrentTrack(prev => prev + 1)
     else if (repeat) setCurrentTrack(0)
   }
@@ -255,10 +266,13 @@ export default function MusicPlayer() {
     if (curTime > 3 && howlRef.current) {
       howlRef.current.seek(0)
       setCurrentTime(0)
-    } else if (currentTrack > 0) {
-      setCurrentTrack(prev => prev - 1)
     } else {
-      setCurrentTrack(tracks.length - 1)
+      pendingPlayRef.current = continuousPlayRef.current || isPlaying
+      if (currentTrack > 0) {
+        setCurrentTrack(prev => prev - 1)
+      } else {
+        setCurrentTrack(tracks.length - 1)
+      }
     }
   }
 

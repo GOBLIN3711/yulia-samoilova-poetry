@@ -57,10 +57,10 @@ function Hero() {
         </div>
       </div>
 
-      {/* ─── Mobile: image flows naturally, fully visible ─── */}
+      {/* ─── Mobile: full image, nothing cropped ─── */}
       <div className="md:hidden relative">
         <img
-          src="/v2_hero_mobile.png"
+          src="/v2_hero.png"
           alt="Юлия Самойлова — Поэтесса из Санкт-Петербурга"
           className="w-full h-auto block"
           style={{ display: 'block' }}
